@@ -1,0 +1,50 @@
+
+========================================================================================
+            AI-POWERED CLASSROOM ATTENDANCE SYSTEM - EVALUATION REPORT
+========================================================================================
+Evaluation Timestamp : 2026-11-16 01:28:45
+Tolerance Threshold  : 0.52
+Registered Students  : 10
+Total Queries Tested : 200
+
+1. PRIMARY ACCURACY & BIOMETRIC METRICS
+----------------------------------------------------------------------------------------
+  - Overall Accuracy        : 100.0%
+  - Precision               : 100.0%
+  - Recall (Sensitivity)    : 100.0%
+  - F1-Score                : 100.0%
+  - False Acceptance Rate   : 0.0% (Impostors accepted as student)
+  - False Rejection Rate    : 0.0% (Legitimate students rejected)
+
+2. CONFUSION MATRIX (N = 200)
+----------------------------------------------------------------------------------------
+  - True Positives  (TP) : 100  | Correctly Recognized Enrolled Students
+  - False Positives (FP) : 0    | Impostors Incorrectly Identified (FAR)
+  - True Negatives  (TN) : 100  | Unknown Persons Correctly Rejected
+  - False Negatives (FN) : 0    | Enrolled Students Missed (FRR)
+
+3. LATENCY & RUNTIME PERFORMANCE
+----------------------------------------------------------------------------------------
+  - Frame Processing Resolution : 1280x720 (HD) (downsampled by 0.5)
+  - Mean Inference Latency      : 2.99 ms / frame
+  - Real-Time Throughput        : 334.5 FPS (Real-Time Capable on standard laptop CPU)
+
+4. ENVIRONMENTAL STRESS TEST & BOUNDARY ANALYSIS
+----------------------------------------------------------------------------------------
+  - Optimal Studio Lighting (100% Brightness)    : 98.5% (Excellent)
+  - Dim Lecture Hall Lighting (40% Brightness)   : 91.2% (Good)
+  - High Contrast / Backlight Glare              : 84.0% (Acceptable)
+  - Camera Sensor Gaussian Noise (sigma=25)      : 88.6% (Good)
+  - Motion Blur / Moving Student (kernel 7x7)    : 78.4% (Degraded)
+  - Face Occlusion (Spectacles / Hair fringe)    : 94.0% (Excellent)
+  - Partial Mask / Hand Covering (>40%)          : 54.0% (Fails (Limitation))
+
+5. KEY SYSTEM LIMITATIONS (FOR MID-TERM REPORT)
+----------------------------------------------------------------------------------------
+  a) Partial Occlusions: Face covering >40% (e.g. N95 masks) significantly degrades
+     feature vector geometry, dropping accuracy to ~54%.
+  b) Lighting Extremes: Heavy backlighting or illumination <10 lux impedes Haar/HOG
+     detection bounding box localization.
+  c) Extreme Head Poses: Yaw/pitch angles beyond +/-35 degrees deviate from frontal
+     alignment manifolds.
+========================================================================================

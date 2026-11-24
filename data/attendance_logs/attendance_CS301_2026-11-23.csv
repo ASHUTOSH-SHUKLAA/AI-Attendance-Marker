@@ -1,0 +1,2 @@
+id,student_id,name,date,time,course_code,course_name,session_name,day_of_week,confidence,status
+5,STU011,Ashutosh,2026-11-23,01:12:23,CS301,Computer Vision,Lecture_01,Monday,82.71,Present

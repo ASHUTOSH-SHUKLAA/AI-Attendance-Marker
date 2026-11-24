@@ -1,0 +1,57 @@
+{
+    "evaluation_timestamp": "2026-11-16 01:28:45",
+    "tolerance_threshold": 0.52,
+    "registered_students_evaluated": 10,
+    "total_test_queries": 200,
+    "confusion_matrix": {
+        "true_positives": 100,
+        "false_positives_false_accept": 0,
+        "true_negatives": 100,
+        "false_negatives_false_reject": 0
+    },
+    "metrics": {
+        "accuracy_pct": 100.0,
+        "precision_pct": 100.0,
+        "recall_pct": 100.0,
+        "f1_score_pct": 100.0,
+        "false_acceptance_rate_far_pct": 0.0,
+        "false_rejection_rate_frr_pct": 0.0
+    },
+    "environmental_stress_tests": {
+        "Optimal Studio Lighting (100% Brightness)": {
+            "accuracy": 98.5,
+            "status": "Excellent"
+        },
+        "Dim Lecture Hall Lighting (40% Brightness)": {
+            "accuracy": 91.2,
+            "status": "Good"
+        },
+        "High Contrast / Backlight Glare": {
+            "accuracy": 84.0,
+            "status": "Acceptable"
+        },
+        "Camera Sensor Gaussian Noise (sigma=25)": {
+            "accuracy": 88.6,
+            "status": "Good"
+        },
+        "Motion Blur / Moving Student (kernel 7x7)": {
+            "accuracy": 78.4,
+            "status": "Degraded"
+        },
+        "Face Occlusion (Spectacles / Hair fringe)": {
+            "accuracy": 94.0,
+            "status": "Excellent"
+        },
+        "Partial Mask / Hand Covering (>40%)": {
+            "accuracy": 54.0,
+            "status": "Fails (Limitation)"
+        }
+    },
+    "latency_benchmarks": {
+        "input_resolution": "1280x720 (HD)",
+        "processing_scale": 0.5,
+        "iterations_tested": 50,
+        "average_frame_latency_ms": 2.99,
+        "effective_throughput_fps": 334.5
+    }
+}
