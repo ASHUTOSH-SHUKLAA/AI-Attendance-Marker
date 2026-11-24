@@ -208,23 +208,36 @@ class DatabaseManager:
         time_str = now.strftime("%H:%M:%S")
         day_of_week = now.strftime("%A")
 
-        # 1. Resolve Active Scheduled Lecture
+        # 1. Resolve Active Scheduled Lecture (or bypass if enforce_window is False / Demo Mode)
         active_slot = self.schedule_mgr.get_active_slot(now)
-        if not active_slot:
-            return False, "Attendance is currently unavailable. No lecture is scheduled at this time."
 
-        # 2. Validate course code if explicitly requested
-        if course_code and course_code != "AUTO" and course_code != active_slot["course_code"]:
-            return False, (
-                f"Attendance Rejected: Requested course '{course_code}' does not match active scheduled lecture "
-                f"({active_slot['course_code']} - {active_slot['course_name']})."
-            )
+        if enforce_window:
+            if not active_slot:
+                return False, "Attendance is currently unavailable. No lecture is scheduled at this time."
 
-        resolved_course_code = active_slot["course_code"]
-        resolved_course_name = active_slot["course_name"]
-        resolved_session_name = session_name or active_slot["session_type"]
+            if course_code and course_code != "AUTO" and course_code != active_slot["course_code"]:
+                return False, (
+                    f"Attendance Rejected: Requested course '{course_code}' does not match active scheduled lecture "
+                    f"({active_slot['course_code']} - {active_slot['course_name']})."
+                )
 
-        # 3. Check duplicate for this day and subject
+            resolved_course_code = active_slot["course_code"]
+            resolved_course_name = active_slot["course_name"]
+            resolved_session_name = session_name or active_slot["session_type"]
+        else:
+            # Demo Mode: Timetable schedule check bypassed for demonstration
+            if active_slot and (not course_code or course_code == "AUTO"):
+                resolved_course_code = active_slot["course_code"]
+                resolved_course_name = active_slot["course_name"]
+                resolved_session_name = session_name or active_slot["session_type"]
+            else:
+                target_code = course_code if (course_code and course_code != "AUTO") else config.DEFAULT_COURSE_CODE
+                c_details = self.schedule_mgr.get_course_details(target_code)
+                resolved_course_code = c_details["course_code"]
+                resolved_course_name = c_details["course_name"]
+                resolved_session_name = session_name or "Demo / Practice Session"
+
+        # 2. Check duplicate for this day and subject
         if self.is_already_marked(student_id, date_str, resolved_course_code):
             return False, f"Already marked for {resolved_course_code} ({resolved_course_name}) today ({date_str})."
 

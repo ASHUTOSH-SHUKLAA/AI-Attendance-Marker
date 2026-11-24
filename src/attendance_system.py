@@ -28,6 +28,7 @@ class AttendanceSystem:
         course_code: str = "AUTO",
         session_name: str = config.DEFAULT_SESSION_NAME,
         enable_liveness: bool = False,
+        demo_mode: bool = config.DEMO_MODE,
     ):
         self.db = db or DatabaseManager()
         self.engine = engine or FaceEngine()
@@ -35,6 +36,7 @@ class AttendanceSystem:
         self.course_code = course_code
         self.session_name = session_name
         self.enable_liveness = enable_liveness
+        self.demo_mode = demo_mode
 
         # Debounce tracker: {(student_id, course_code): last_logged_timestamp}
         self.last_marked_time: Dict[tuple, float] = {}
@@ -45,20 +47,30 @@ class AttendanceSystem:
 
     def resolve_current_course(self, dt: Optional[datetime] = None) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """
-        Determines the current course code, course name, and session type based strictly
-        on the active lecture in the academic timetable.
-        Returns (course_code, course_name, session_type) if a lecture is active, else (None, None, None).
+        Determines the current course code, course name, and session type.
+        - In strict mode: strictly uses the active lecture in the academic timetable.
+        - In demo mode: bypasses timetable and resolves to selected course (or active/default).
         """
         now = dt or datetime.now()
         active = self.schedule_mgr.get_active_slot(now)
-        if active:
+
+        if active and (not self.course_code or self.course_code == "AUTO"):
+            return active["course_code"], active["course_name"], active["session_type"]
+        elif self.demo_mode:
+            target_code = self.course_code if (self.course_code and self.course_code != "AUTO") else (
+                active["course_code"] if active else config.DEFAULT_COURSE_CODE
+            )
+            c = self.schedule_mgr.get_course_details(target_code)
+            return c["course_code"], c["course_name"], self.session_name or "Demo Session"
+        elif active:
             return active["course_code"], active["course_name"], active["session_type"]
         return None, None, None
 
     def trigger_attendance(self, face: DetectedFace, dt: Optional[datetime] = None) -> Tuple[bool, str]:
         """
         Evaluates and records attendance for a recognized student.
-        Strictly enforces that a lecture must be currently active.
+        In strict mode, validates that a lecture is active.
+        In demo mode, allows marking attendance anytime for demonstration.
         """
         if not face.is_known or not face.student_id:
             return False, "Unknown face"
@@ -66,15 +78,17 @@ class AttendanceSystem:
         now_dt = dt or datetime.now()
         active_slot = self.schedule_mgr.get_active_slot(now_dt)
 
-        # 1. Reject immediately if no lecture is scheduled
-        if not active_slot:
+        # 1. Reject immediately if no lecture is scheduled and not in demo mode
+        if not active_slot and not self.demo_mode:
             self.notification_msg = "Attendance is currently unavailable. No lecture is scheduled at this time."
             self.notification_expiry = time.time() + 3.5
             self.notification_color = (0, 70, 255)  # Red warning
             return False, self.notification_msg
 
-        c_code = active_slot["course_code"]
-        s_name = active_slot["session_type"]
+        c_code, c_name, s_name = self.resolve_current_course(dt=now_dt)
+        if not c_code:
+            return False, "No valid course resolved"
+
         now = time.time()
         debounce_key = (face.student_id, c_code)
         last_time = self.last_marked_time.get(debounce_key, 0.0)
@@ -90,6 +104,7 @@ class AttendanceSystem:
             course_code=c_code,
             session_name=s_name,
             dt=now_dt,
+            enforce_window=not self.demo_mode,
         )
 
         self.last_marked_time[debounce_key] = now
@@ -112,13 +127,18 @@ class AttendanceSystem:
         now_dt = dt or datetime.now()
         active_slot = self.schedule_mgr.get_active_slot(now_dt)
         sched_status = self.schedule_mgr.get_schedule_status(now_dt)
+        c_code, c_name, _ = self.resolve_current_course(dt=now_dt)
 
         # 1. Draw Bounding Boxes and Name Badges for each face
         for face in faces:
             left, top, right, bottom = face.left, face.top, face.right, face.bottom
 
             if face.is_known:
-                if active_slot:
+                if self.demo_mode:
+                    color = config.COLOR_KNOWN
+                    label = f"{face.name} ({face.confidence:.1f}%)"
+                    sub_label = f"ID: {face.student_id} | {c_code} [DEMO]"
+                elif active_slot:
                     color = config.COLOR_KNOWN
                     label = f"{face.name} ({face.confidence:.1f}%)"
                     sub_label = f"ID: {face.student_id} | {active_slot['course_code']}"
@@ -183,7 +203,12 @@ class AttendanceSystem:
         cv2.rectangle(display, (0, 0), (w, 54), config.COLOR_BANNER, cv2.FILLED)
         day_str = now_dt.strftime("%A, %b %d")
 
-        if active_slot:
+        if self.demo_mode:
+            title_text = f"DEMO MODE: {c_code} \u2014 {c_name.upper()} [SCHEDULE BYPASSED]"
+            sub_text = f"{day_str} | Attendance enabled anytime for testing | Timetable bypass active"
+            title_color = (0, 255, 255)  # Yellow/Cyan
+            sub_color = (0, 220, 220)
+        elif active_slot:
             title_text = f"ACTIVE LECTURE: {active_slot['course_code']} \u2014 {active_slot['course_name'].upper()}"
             sub_text = f"{day_str} | Slot: {active_slot['start']} - {active_slot['end']} | Room: {active_slot['room']} | Faculty: {active_slot['faculty']}"
             title_color = (0, 255, 200)
@@ -219,7 +244,12 @@ class AttendanceSystem:
         else:
             # Persistent status
             cv2.rectangle(display, (0, h - 35), (w, h), (20, 20, 20), cv2.FILLED)
-            if active_slot:
+            if self.demo_mode:
+                status_text = (
+                    f"DEMO MODE ACTIVE | Subject: {c_code} ({c_name}) | "
+                    f"Attendance Enabled Anytime | [Q] Quit  [S] Snapshot  [E] Export"
+                )
+            elif active_slot:
                 status_text = (
                     f"Active: {active_slot['course_code']} ({active_slot['course_name']}) | "
                     f"One attendance per student per lecture | [Q] Quit  [S] Snapshot  [E] Export"

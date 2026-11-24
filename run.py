@@ -63,6 +63,11 @@ def parse_arguments():
         action="store_true",
         help="Enable anti-spoofing / liveness texture verification",
     )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Enable Demo Mode: bypass timetable schedule enforcement and mark attendance anytime",
+    )
     return parser.parse_args()
 
 
@@ -77,18 +82,21 @@ def main():
     engine = FaceEngine()
 
     if args.mode == "gui":
-        print("[Launcher] Starting Desktop GUI Dashboard...")
+        print(f"[Launcher] Starting Desktop GUI Dashboard {'(Demo Mode: Schedule Bypass Enabled)' if args.demo else ''}...")
         from src.gui_app import launch_gui
-        launch_gui()
+        launch_gui(demo_mode=args.demo)
 
     elif args.mode == "live":
         print(f"[Launcher] Starting Real-Time Camera Scanner on camera index {args.camera}...")
+        if args.demo:
+            print("[Demo Mode] Timetable schedule enforcement is BYPASSED. Attendance can be marked anytime.")
         attendance_sys = AttendanceSystem(
             db=db,
             engine=engine,
             course_code=args.course,
             session_name=args.session,
             enable_liveness=args.liveness,
+            demo_mode=args.demo,
         )
         attendance_sys.run_live(camera_index=args.camera)
 
@@ -99,11 +107,14 @@ def main():
             sys.exit(1)
 
         print(f"[Launcher] Scanning classroom image: {target_path}")
+        if args.demo:
+            print("[Demo Mode] Timetable schedule enforcement is BYPASSED.")
         attendance_sys = AttendanceSystem(
             db=db,
             engine=engine,
             course_code=args.course,
             session_name=args.session,
+            demo_mode=args.demo,
         )
         res = attendance_sys.scan_image(target_path)
         print(f" -> Total Faces Detected: {res['total_faces_detected']}")

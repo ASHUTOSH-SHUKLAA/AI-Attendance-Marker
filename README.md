@@ -87,18 +87,25 @@ python run.py --mode gui
 ```
 - Interactive tabs:
   1. **📋 Today's Log:** Shows live records with Student ID, Name, Subject, Time, and Confidence.
-  2. **📊 Subject Review (<75%):** Full curriculum matrix with percentage per subject and Defaulter alert tags.
-  3. **📅 Timetable (10-4):** Interactive timetable viewer for Monday to Saturday.
-  4. **👥 Enrolled (10+):** Student directory.
-  5. **➕ Enroll:** Live webcam registration with 5 captures.
-  6. **📈 Accuracy:** Biometric evaluation benchmark.
+  2. **🏫 Class Roster:** Browse conducted classes, headcount, who was present, and who was absent.
+  3. **📊 Subject Review (<75%):** Full curriculum matrix with percentage per subject and Defaulter alert tags.
+  4. **📅 Timetable (10-4):** Interactive timetable viewer for Monday to Saturday.
+  5. **👥 Enrolled (10+):** Student directory.
+  6. **➕ Enroll:** Live webcam registration with 5 captures.
+  7. **📈 Accuracy:** Biometric evaluation benchmark.
+
+> **💡 Demo Mode (Schedule Bypass):**  
+> Check the **"🧪 Demo Mode (Bypass Schedule)"** box in the GUI toolbar (or launch with `python run.py --mode gui --demo`) to test and mark attendance at any time for any subject without waiting for scheduled lecture hours.
 
 ### Option B: Real-Time Live Webcam Scanner
 ```powershell
 python run.py --mode live
 ```
 - Automatically resolves the active subject from the timetable schedule.
-- Override subject manually: `python run.py --mode live --course CS301`
+- To run live camera in Demo Mode (bypass schedule):
+  ```powershell
+  python run.py --mode live --demo --course CS301
+  ```
 - Shortcuts: **`Q`** Quit | **`S`** Snapshot | **`E`** Export CSV
 
 ### Option C: View Conducted Classes & Attendee Rosters (Who & How Many)

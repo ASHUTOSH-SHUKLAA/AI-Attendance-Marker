@@ -48,7 +48,8 @@ DEFAULT_SESSION_NAME = "Lecture_01"
 SCHEDULE_OPERATING_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 SCHEDULE_START_TIME = "10:00"  # 10:00 AM
 SCHEDULE_END_TIME = "16:00"    # 04:00 PM
-ENFORCE_TIME_WINDOW = True     # Strict timetable enforcement: attendance only marked during active lecture slots
+ENFORCE_TIME_WINDOW = True     # Strict timetable enforcement by default
+DEMO_MODE = False              # Set True or use --demo / GUI toggle to bypass schedule for demo testing
 MIN_ATTENDANCE_PERCENTAGE = 75.0  # College eligibility threshold
 
 # Visual Display Settings

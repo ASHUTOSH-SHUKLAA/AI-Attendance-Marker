@@ -31,11 +31,12 @@ from src.schedule_manager import ScheduleManager, CURRICULUM_COURSES
 class AttendanceGUI:
     """Desktop Dashboard for classroom attendance management with schedule integration."""
 
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, demo_mode: bool = False):
         self.root = root
         self.root.title("AI-Powered Classroom Attendance System - CS301 / Semester 5")
         self.root.geometry("1240x800")
         self.root.minsize(1040, 680)
+        self.initial_demo_mode = demo_mode
 
         # Apply dark modern theme
         self.bg_color = "#18181b"
@@ -51,7 +52,7 @@ class AttendanceGUI:
         self.db = DatabaseManager()
         self.engine = FaceEngine()
         self.schedule_mgr = ScheduleManager()
-        self.attendance_sys = AttendanceSystem(db=self.db, engine=self.engine)
+        self.attendance_sys = AttendanceSystem(db=self.db, engine=self.engine, demo_mode=demo_mode)
         self.enrollment_mgr = EnrollmentManager(db=self.db, engine=self.engine)
 
         # Camera & State
@@ -93,7 +94,7 @@ class AttendanceGUI:
         )
         self.lbl_clock.pack(side=tk.RIGHT)
 
-        # 2. Timetable Active Lecture Status Banner (Strict Timetable Validation)
+        # 2. Timetable Active Lecture Status Banner & Demo Mode Controls
         toolbar = tk.Frame(self.root, bg="#18181b", padx=15, pady=8)
         toolbar.pack(fill=tk.X)
 
@@ -107,6 +108,38 @@ class AttendanceGUI:
             pady=4,
         )
         self.lbl_active_lecture.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+
+        # Demo Mode Toggle Checkbox
+        self.var_demo_mode = tk.BooleanVar(value=self.initial_demo_mode)
+        self.chk_demo = tk.Checkbutton(
+            toolbar,
+            text="🧪 Demo Mode (Bypass Schedule)",
+            variable=self.var_demo_mode,
+            command=self._on_toggle_demo_mode,
+            font=("Segoe UI", 9, "bold"),
+            fg="#fbbf24",
+            bg="#18181b",
+            selectcolor="#27272a",
+            activebackground="#18181b",
+            activeforeground="#fbbf24",
+        )
+        self.chk_demo.pack(side=tk.LEFT, padx=(0, 6))
+
+        # Demo Subject Selector
+        self.demo_course_options = [
+            f"{c['course_code']} - {c['course_name']}" for c in CURRICULUM_COURSES
+        ]
+        self.var_demo_course = tk.StringVar(value=self.demo_course_options[0])
+        self.cmb_demo_course = ttk.Combobox(
+            toolbar,
+            textvariable=self.var_demo_course,
+            values=self.demo_course_options,
+            state="readonly" if self.initial_demo_mode else "disabled",
+            width=28,
+            font=("Segoe UI", 9),
+        )
+        self.cmb_demo_course.pack(side=tk.LEFT, padx=(0, 10))
+        self.cmb_demo_course.bind("<<ComboboxSelected>>", self._on_demo_course_selected)
 
         self.lbl_window_badge = tk.Label(
             toolbar,
@@ -244,7 +277,23 @@ class AttendanceGUI:
 
         self.lbl_clock.config(text=f"{day_str} | {time_str}")
 
-        if active:
+        if self.var_demo_mode.get():
+            c_code, c_name, _ = self.attendance_sys.resolve_current_course(dt=now)
+            demo_text = f"🧪 DEMO MODE: {c_code} \u2014 {c_name} [SCHEDULE BYPASS ACTIVE]"
+            self.lbl_active_lecture.config(
+                text=demo_text,
+                fg="#fef08a",
+                bg="#713f12",
+            )
+            self.lbl_window_badge.config(
+                text="🧪 DEMO (BYPASS ACTIVE)",
+                bg="#854d0e",
+                fg="#ffffff",
+            )
+            self.status_bar.config(
+                text=f"Demo Mode: Schedule bypass active | Attendance enabled for {c_code} ({c_name}) anytime"
+            )
+        elif active:
             lecture_text = (
                 f"ACTIVE LECTURE: {active['course_code']} \u2014 {active['course_name']} "
                 f"({active['start']} - {active['end']}) | Room: {active['room']} | Faculty: {active['faculty']}"
@@ -274,10 +323,37 @@ class AttendanceGUI:
                 fg="#fecaca",
             )
             self.status_bar.config(
-                text=f"No Active Lecture | {status_info['message']} | Mon-Sat 10:00 AM - 04:00 PM"
+                text=f"No Active Lecture | {status_info['message']} | Mon-Sat 10:00 AM - 04:00 PM (Or enable '🧪 Demo Mode')"
             )
 
         self.root.after(1000, self._start_clock_ticker)
+
+    def _on_toggle_demo_mode(self):
+        is_demo = self.var_demo_mode.get()
+        self.attendance_sys.demo_mode = is_demo
+        if is_demo:
+            self.cmb_demo_course.config(state="readonly")
+            self._on_demo_course_selected()
+            messagebox.showinfo(
+                "Demo Mode Activated",
+                "Timetable schedule enforcement is now BYPASSED.\n\n"
+                "You can now test and mark attendance at any time for the selected subject.",
+            )
+        else:
+            self.cmb_demo_course.config(state="disabled")
+            self.attendance_sys.course_code = "AUTO"
+            messagebox.showinfo(
+                "Strict Schedule Restored",
+                "Timetable schedule enforcement is now RESTORED.\n\n"
+                "Attendance will only be marked during active scheduled lecture slots (Mon-Sat 10 AM - 4 PM).",
+            )
+
+    def _on_demo_course_selected(self, event=None):
+        if not self.var_demo_mode.get():
+            return
+        val = self.var_demo_course.get()
+        code = val.split(" - ")[0].strip()
+        self.attendance_sys.course_code = code
 
     def _build_attendance_tab(self):
         top_row = tk.Frame(self.tab_attendance, bg=self.card_bg)
@@ -930,9 +1006,9 @@ class AttendanceGUI:
         self.txt_metrics.insert(tk.END, summary_txt)
 
 
-def launch_gui():
+def launch_gui(demo_mode: bool = False):
     root = tk.Tk()
-    app = AttendanceGUI(root)
+    app = AttendanceGUI(root, demo_mode=demo_mode)
     root.mainloop()
 
 

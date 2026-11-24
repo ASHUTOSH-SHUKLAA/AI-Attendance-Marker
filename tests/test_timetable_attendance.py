@@ -137,20 +137,23 @@ class TestDatabaseTimetableAttendanceValidation(unittest.TestCase):
 
     def setUp(self):
         self.test_db_path = ROOT_DIR / "data" / "test_attendance_validation.db"
-        if self.test_db_path.exists():
-            self.test_db_path.unlink()
-
         self.db = DatabaseManager(db_path=self.test_db_path)
+        with self.db._get_connection() as conn:
+            conn.execute("DELETE FROM attendance")
+            conn.execute("DELETE FROM students")
+            conn.commit()
         # Register two test students
         self.db.add_student("STU_A", "Alice Sharma", "21CS001", "CSE", 5)
         self.db.add_student("STU_B", "Bob Patel", "21CS002", "CSE", 5)
 
     def tearDown(self):
-        if self.test_db_path.exists():
-            try:
-                self.test_db_path.unlink()
-            except Exception:
-                pass
+        try:
+            with self.db._get_connection() as conn:
+                conn.execute("DELETE FROM attendance")
+                conn.execute("DELETE FROM students")
+                conn.commit()
+        except Exception:
+            pass
 
     def test_attendance_allowed_during_active_lecture(self):
         # Monday 10:15 AM -> Active CS301 (Computer Vision)
@@ -311,6 +314,38 @@ class TestDatabaseTimetableAttendanceValidation(unittest.TestCase):
         # Clean up test export
         if csv_file.exists():
             csv_file.unlink()
+
+    def test_demo_mode_bypasses_schedule_enforcement(self):
+        # Sunday 10:30 AM (Normally non-working day -> Rejected in strict mode)
+        t_sunday = datetime(2026, 11, 29, 10, 30, 0)
+
+        # 1. Strict mode (enforce_window=True) -> Must be rejected
+        strict_success, strict_msg = self.db.mark_attendance(
+            student_id="STU_A",
+            name="Alice Sharma",
+            confidence=95.0,
+            dt=t_sunday,
+            enforce_window=True,
+        )
+        self.assertFalse(strict_success)
+        self.assertIn("No lecture is scheduled", strict_msg)
+
+        # 2. Demo mode (enforce_window=False) -> Must succeed and mark attendance
+        demo_success, demo_msg = self.db.mark_attendance(
+            student_id="STU_A",
+            name="Alice Sharma",
+            confidence=95.0,
+            course_code="CS301",
+            dt=t_sunday,
+            enforce_window=False,
+        )
+        self.assertTrue(demo_success)
+        self.assertIn("Marked", demo_msg)
+
+        # Verify record in DB
+        records = self.db.get_attendance_records(date_str="2026-11-29", course_code="CS301")
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["student_id"], "STU_A")
 
 
 if __name__ == "__main__":
